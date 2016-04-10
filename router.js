@@ -40,30 +40,30 @@ function _storeOnCache( route ){
 	})
 }
 
-function _hashRouteListen( verb, route, back ){
+function _hashRoute( verb, route, back, sendOrListen){
 	verb  = verb.trim().toUpperCase();
-	route = route.trim()//;.toUpperCase();
-	back = (back || false);
-	if( verb === 'STD' || (3 > arguments.length)){
-		return verb + '::' + route + '::' + PROC_SIDES.TR[PROC_SIDE];
+	route = route.trim();
+	var base = verb + '::' + route;
+	var proc = (sendOrListen === 'LISTEN')?PROC_SIDES.TR[PROC_SIDE]:PROC_SIDES.TR[1-PROC_SIDE];
+	var no_p = (sendOrListen === 'LISTEN')?PROC_SIDES.TR[1-PROC_SIDE]:PROC_SIDES.TR[PROC_SIDE];
+	var dir  = (sendOrListen === 'LISTEN')?'FORW':'BACK';
+	var separator = '::';
+	if( verb === 'STD' || undefined === back ){
+		base += ( separator + proc );
 	}else if( !back ){
-		return verb + '::' + route + '::' + PROC_SIDES.TR[PROC_SIDE] + '::' + 'FORW';
+		base += ( separator + proc + separator + dir );
 	}else{
-		return verb + '::' + route + '::' + PROC_SIDES.TR[1-PROC_SIDE] + '::' + 'BACK';
+		base += ( separator + no_p + separator + 'BACK' );
 	}
+	return base;
+}
+
+function _hashRouteListen( verb, route, back ){
+	return _hashRoute( verb, route, back, 'LISTEN');
 }
 
 function _hashRouteSend( verb, route, back ){
-	verb  = verb.trim().toUpperCase();
-	route = route.trim()//;.toUpperCase();
-	back = (back || false);
-	if( verb === 'STD' || (3 > arguments.length)){
-		return verb + '::' + route + '::' + PROC_SIDES.TR[1-PROC_SIDE];
-	}else if( !back ){
-		return verb + '::' + route + '::' + PROC_SIDES.TR[1-PROC_SIDE] + '::' + 'FORW';
-	}else{
-		return verb + '::' + route + '::' + PROC_SIDES.TR[PROC_SIDE] + '::' + 'BACK';
-	}
+	return _hashRoute( verb, route, back, 'SEND');
 }
 
 class Router {
@@ -72,32 +72,34 @@ class Router {
 
 		this._name = name;
 		this._routes = {};
-		this._window = window;
+		this._windows = [];
 
 		// Prepare CACHE
 		VERBS.forEach( verb => {
 			CACHED.http[ verb ] = [];
 		})
 
-		this._setup();
+		this._setup( window );
 	}
 
-	_setup(){
+	_setup( window ){
 		// Here we set the necessary callbacks for retrieving
 		// other side events
 		if( ipc ){
 			var that = this;
-			//console.log('[SETUP]', PROC_SIDE, 'LISTENING FOR', SIDE_EVTS[PROC_SIDE].GET);
 			// Register a handler for retrieving other's side route
 			ipc.on(SIDE_EVTS[PROC_SIDE].GET, function( event, routes ){
 				_storeOnCache( routes );
-				//console.log('RESTORE CACHE', CACHED);
 			})
-			//console.log('[SETUP]', PROC_SIDE, 'RETRIEVING FOR', SIDE_EVTS[1-PROC_SIDE].GET);
 			ipc.on(SIDE_EVTS[1-PROC_SIDE].SET, function( event, routes ){
 				that._sendCache();
 			})
 			this._requestCache();
+		}
+		if( window ){
+			this._windows.push( window );
+			var idx = this._windows.length -1;
+			window.on('closed', function(){ this._cleanWindow( idx ) }.bind(this))
 		}
 	}
 
@@ -107,10 +109,9 @@ class Router {
 		// so no route is going to be fired, as every method registers on 
 		// ipc too, we can reconstruct the routes based on ipc channel
 		// Reconstruct all routes
-		//console.log('[SETUP]', PROC_SIDES.TR[PROC_SIDE], 'SENDING FOR', SIDE_EVTS[PROC_SIDE].SET);
-		if( this._window ){
-			this._window.send(SIDE_EVTS[PROC_SIDE].SET);
-		}else{
+		if( this._windows.length ){
+			this._windows.forEach( w => { w.send(SIDE_EVTS[PROC_SIDE].SET) }, this);
+		}else if( ipc && ipc.send ){
 			ipc.send(SIDE_EVTS[PROC_SIDE].SET);
 		}
 
@@ -118,11 +119,17 @@ class Router {
 
 	_sendCache(){
 
-		if( this._window ){
-			this._window.send( SIDE_EVTS[1-PROC_SIDE].GET, _wrap(this._routes) );
-		}else{
+		if( this._windows.length ){
+			this._windows.forEach(w => { w.send( SIDE_EVTS[1-PROC_SIDE].GET, _wrap(this._routes) ) }, this);
+		}else if( ipc && ipc.send ){
 			ipc.send( SIDE_EVTS[1-PROC_SIDE].GET, _wrap(this._routes) );
 		}
+
+	}
+
+	_cleanWindow( idx ){
+
+		this._windows.splice( idx, 1 );
 
 	}
 
@@ -161,9 +168,9 @@ class Router {
 							err = null;
 						}
 						//console.log('sending to', this._window?'window':'ipc', _hashRouteSend( verb, route, true ));
-						if( this._window ){
-							this._window.send.apply(this._window, [_hashRouteSend( verb, route, true ), err].concat(JSON.parse(JSON.stringify( obj ))));
-						}else{
+						if( this._windows.length ){
+							this._windows.forEach( w => { w.send.apply(w, [_hashRouteSend( verb, route, true ), err].concat(JSON.parse(JSON.stringify( obj )))) }, this );
+						}else if( ipc && ipc.send ){
 							ipc.send.apply(ipc, [_hashRouteSend( verb, route, true ), err].concat(JSON.parse(JSON.stringify( obj ))));
 						}
 					}.bind(that)
@@ -191,21 +198,18 @@ class Router {
 
 	}
 
-	// SENDER
+	// SENDER - One direction
 	send(){
-
-		// Re-Cache, just in case...
-		this._requestCache();
 
 		var that = this;
 		var fnArgs = arguments;
 
-		setTimeout(function() {
+		// Ensure
+		process.nextTick(function(){
 
 			var args = Array.prototype.slice.call(fnArgs, 0);
-
-			if( that._window ){
-				that._window.send.apply( that._window, args || [] );
+			if( that._windows.length ){
+				that._windows.forEach( w => { w.send.apply( w, args || [] ) }, that );
 			}
 
 			var routes = [args.shift()];
@@ -214,14 +218,13 @@ class Router {
 			}else{
 				routes = ['*'].concat( routes );
 			}
-
 			routes.forEach(function( route ){
 
 				if( ipc && (-1 !== CACHED.std.indexOf(route) )){
 
-					if( that._window ){
-						that._window.send.apply(that._window, [_hashRouteSend( 'STD', route )].concat( JSON.stringify(args || []) ));
-					}else{
+					if( that._windows.length ){
+						that._windows.forEach( w => { w.send.apply(w, [_hashRouteSend( 'STD', route )].concat( JSON.stringify(args || []) )) }, that );
+					}else if( ipc && ipc.send ){
 						ipc.send.apply(ipc, [_hashRouteSend( 'STD', route )].concat( JSON.stringify(args || []) ));
 					}
 
@@ -236,12 +239,13 @@ class Router {
 					})
 
 				}
+
 			}, that)
 
-		}, 10);
+		});
 
 	}
-
+	
 	// RECEIVER
 	on(){
 
@@ -275,7 +279,7 @@ class Router {
 
 	}
 
-	// SENDER
+	// SENDER - Duplex
 	route(){
 		
 		var args = Array.prototype.slice.call(arguments, 0);
@@ -320,9 +324,9 @@ class Router {
 						cb( args.splice(0, 1)[0], JSON.parse( JSON.stringify( args ) ) );
 					})
 					//console.log('send', 'registered back on', _hashRouteListen( verb, route, true ));
-					if( that._window ){
-						that._window.send.apply(that._window, [_hashRouteSend( verb, route )].concat( JSON.stringify(fnArgs || []) ));
-					}else{
+					if( that._windows.length ){
+						that._windows.forEach( w => { w.send.apply(w, [_hashRouteSend( verb, route )].concat( JSON.stringify(fnArgs || []) )) }, this );
+					}else if( ipc && ipc.send ){
 						ipc.send.apply(ipc, [_hashRouteSend( verb, route )].concat( JSON.stringify(fnArgs || []) ));
 					}
 
@@ -382,23 +386,30 @@ class Router {
 //module.exports = Router;
 var _router = null;
 module.exports = function( name, window ){
-	try{
 
-		ipc = require('electron').ipcMain;
+	if( null === ipc ){
+		try{
 
-		if( ipc !== undefined ){
-			// We are on main process
-			PROC_SIDE = PROC_SIDES.MAIN;
-		}else{
-			ipc = require('electron').ipcRenderer;
-			PROC_SIDE = PROC_SIDES.RENDERER;
+			ipc = require('electron').ipcMain;
+
+			if( ipc !== undefined ){
+				// We are on main process
+				PROC_SIDE = PROC_SIDES.MAIN;
+			}else{
+				ipc = require('electron').ipcRenderer;
+				PROC_SIDE = PROC_SIDES.RENDERER;
+			}
+
+		}catch( e ){
+			// Non electron environment
 		}
-
-	}catch( e ){
-		// Non electron environment
 	}
+
 	if( null === _router ){
 		_router = new Router( name, window );
+	}else if( undefined !== name || undefined !== window ){
+		_router._name = _router._name || name;
+		_router._setup( window );
 	}
 	return _router;
 }
