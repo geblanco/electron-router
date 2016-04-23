@@ -26,6 +26,13 @@ function _wrap( route ){
 	return JSON.stringify( ret );
 }
 
+function _wrapToSend( obj ){
+	var ret;
+	try{ ret = JSON.parse(JSON.stringify( obj )) }
+	catch( e ){ ret = '' }
+	finally{ return ret }
+}
+
 function _storeOnCache( route ){
 	route = JSON.parse( route );
 	Object.keys( route ).forEach( r => {
@@ -163,15 +170,13 @@ class Router {
 				//console.log('Inside receiver cb', req);
 				req.push({
 					json: function( err, obj ){
-						if( arguments.length === 1 ){
-							obj = err;
-							err = null;
-						}
-						//console.log('sending to', this._window?'window':'ipc', _hashRouteSend( verb, route, true ));
+						err || (err = null);
+						err || (obj || (obj = 'OK'));
+						//console.log('sending to', this._window?'window':'ipc', _hashRouteSend( verb, route, true ), 'err', err, 'obj', obj);
 						if( this._windows.length ){
-							this._windows.forEach( w => { w.send.apply(w, [_hashRouteSend( verb, route, true ), err].concat(JSON.parse(JSON.stringify( obj )))) }, this );
+							this._windows.forEach( w => { w.send.apply(w, [_hashRouteSend( verb, route, true ), err].concat( _wrapToSend( obj ) )) }, this );
 						}else if( ipc && ipc.send ){
-							ipc.send.apply(ipc, [_hashRouteSend( verb, route, true ), err].concat(JSON.parse(JSON.stringify( obj ))));
+							ipc.send.apply(ipc, [_hashRouteSend( verb, route, true ), err].concat( _wrapToSend( obj ) ));
 						}
 					}.bind(that)
 				});

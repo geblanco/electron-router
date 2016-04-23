@@ -21,27 +21,27 @@ console.log('\n');
 r2.get('*', function( req, res ){
 	// Register to all get routes
 	console.log('GET', req.params);
-	res.json(['GET RETURN PARAM 1', 'GET RETURN PARAM 2']);
+	res.json( null, ['GET RETURN PARAM 1', 'GET RETURN PARAM 2']);
 })
 
 r2.get('/index', function( req, res ){
 	console.log('GET', req.params);
-	res.json(['GET RETURN PARAM 1', 'GET RETURN PARAM 2']);
+	res.json( null, ['GET RETURN PARAM 1', 'GET RETURN PARAM 2']);
 })
 
 r2.post('/index', function( req, res ){
 	console.log('POST', req.params);
-	res.json(['POST 1', 'POST 2']);
+	res.json( null, ['POST 1', 'POST 2']);
 })
 
 r2.update('/index', function( req, res ){
 	console.log('UPDATE', req.params);
-	res.json(['UPDATE 1', 'UPDATE 2']);
+	res.json( null, ['UPDATE 1', 'UPDATE 2']);
 })
 
 r2.delete('/index', function( req, res ){
 	console.log('DELETE', req.params);
-	res.json('DELETE ERROR', null);
+	res.json( 'DELETE ERROR' );
 })
 
 r1.route('*', '*', {id: '5dfb23kj'}, function( err, results ){
