@@ -4,10 +4,21 @@ Router solving Electron shell callback passing, helpfull for MVC
 # Contents
 - [Motivation](#motivation) 
 - [Features](#features)
+- [API](#api)
 - [Examples](#examples)
 - [Contributing](#contributing)
 - [Future](#future)
 - [Notes](#notes)
+
+## Installation
+
+```
+// Install:
+npm install electron-router
+
+// Test:
+npm test
+```
 
 ## Motivation
 ### The problem
@@ -24,132 +35,180 @@ One example of this is when you have a database and want to query it from the wi
 
 After some brainstorming, the solution I came to was designing the Router, it gives similar options to [express](http://expressjs.com/). I've made a diagram to help visualize all this.
 
-![problem solution](router.svg)
+![problem solution](router.png)
 
 ### The solution
 The router just triggers the functions you register on by sending events and parameters. Allowing easy message/data passing and respecting the event/callback Electron architecture.
 
 ## Features
-The router is just a simple instantiable object, just 'require' and instantiate it and start listening/sending events/data. By now it just have a few features. What this object does is route callbacks from one side to another passing parameters, triggered by different events.
+
+### Wildcards
+Every sent/listened message can use wildcards
+```
+router.on('loading::start', () => { console.log('start loading...') }
+router.on('loading::continue', () => { console.log('continue loading...') }
+router.on('loading::end', () => { console.log('end loading...') }
+
+...
+
+router.send('loading::start', ...) // logs "start loading"
+router.send('loading::*', ...) // logs "start loading", "continue loading", "end loading"
+
+```
+
+#### Simple, plain communication
+You can send messages unidirectionally from the main process to the renderer process and viceversa (analogous to electron's ipc) (Previous example)
+
+#### Duplex communication with channels
+
+```
+router.get('config::*')
+router.post('config', ( req, res ) => {
+	// req.params contain sent parameters
+	// res.json sends data back
+})
+...
+
+router.route('get', 'config::start', ( err, result ) => {
+	console.log('got config', result)
+})
+```
+
+## API
+
+The router is just a static object, there will be one router in the main process and another one on the renderer. Just 'require' it and start listening/sending events/data. What this object does is route callbacks from one side to another passing parameters, triggered by different events.
 It can listen to ipc events and send window events too.
 HTTP Verbs are used just as different channels and for completness (equality to express)
 For every route/event it is possible register wildcard ('*')
 
+#### Instance
 ```
-# Constructs the object setting its name and an optional window to send events to
-Router.constructor( name, window )
+// Constructs the object setting its name
+let Router = require('ElectronRouter')
 
-# Triggers/Sends a message on the given event name passing provided messages.
-Router.send( event, msg1, msg2... )
+// Returns the static instance
+let router = Router( name )
+```
 
-# Register a listener on the given event, triggering the callback when the event is sent. Callback receives the messages sent on the other side
-Router.on( event, callback )
+#### Simple communication
+```
+// Triggers/Sends a message on the given event name passing provided messages.
+router.send( event, msg1, msg2... )
 
-# Triggers/Sends a message to the given route with the given method (HTTP Verbs), passing to that verb/route handler the given messages. It's callback is called with err/result upon return of the handler
-Router.route( route, method, msg1, msg2..., callback )
+// Register a listener on the given event, triggering the callback when the event is sent.
+// Callback receives the messages sent on the other side
+router.on( event, ( msg1, msg2... ) => {})
+```
 
-# Registers handler on method GET and the given route. Callback is called with req, res when that route is queried (triggered from route method)
-Router.get( route, callback( req, res ) )
+#### Duplex communication
+```
+// Triggers/Sends a message to the given route on the given method (channel, HTTP Verbs)
+// passing the given messages to that channel/route handler. 
+// Callback is called with err/result when the handler calls res.json()
+// if the handler does not call the return function, callback is invoked with Err: Timeout
 
-# Registers handler on method POST and the given route. Callback is called with req, res when that route is queried (triggered from route method)
-Router.post( route, callback( req, res ) )
+router.route( method, route, msg1, msg2..., ( err, result ) => {})
 
-# Registers handler on method UPDATE and the given route. Callback is called with req, res when that route is queried (triggered from route method)
-Router.update( route, callback( req, res ) )
+// Similar to router.routes.method( route, msg1, msg2..., ( err, result ) => {})
 
-# Registers handler on method DELETE and the given route. Callback is called with req, res when that route is queried (triggered from route method)
-Router.delete( route, callback( req, res ) )
+// All handlers on all channels are called with
+// 	req { parameters: [], method: channel }
+// 	res { json: [Function] } - function to call with (err, result), triggers the route back
+
+// Registers handler on GET channel at the given route.
+router.get( route, ( req, res ) => {}) // must call res.json( err, result )
+
+// Registers handler on POST channel at the given route.
+router.post( route, ( req, res ) => {}) // must call res.json( err, result )
+
+// Registers handler on UPDATE channel at the given route.
+router.update( route, ( req, res ) => {}) // must call res.json( err, result )
+
+// Registers handler on DELETE channel at the given route.
+router.delete( route, ( req, res ) => {}) // must call res.json( err, result )
 
 ```
 
 ## Examples
-For more examples, see [examples.js](examples.js).
 
 ```
 // On every module that uses the router
-// Import module
-var Router = require('./router');
+// Import it
+let Router = require('ElectronRouter')
 
 // Main script
 
-var electron      = require('electron');
-var app           = electron.app;
-var BrowserWindow = electron.BrowserWindow;
-var Router        = require('router');
-var mainWindow    = null;
-var router        = null;
+cons electron = require('electron')
+const BrowserWindow = electron.BrowserWindow
+const app = electron.app
+const Router = require('router')
+let router = Router('MAIN')
+let mainWindow = null
 
 ...
 
-app.on('ready', function() {
+app.on('ready', () => {
 
 	// Create window
 	... 
 
-	// Instantiate
-    router = new Router('MAIN', mainWindow);
+  // Setup DB and modules
+  ...
 
-    // Setup DB and modules
-    ...
-
-    // Do the rest on ready event (triggered from window, which is usaully the slowest component)
-    router.on('ready', function(){
-    	router.on('quit', function(){
-    		// Close DB
-    		// Handle quit code
-    		...
-    	})
-    })
-});
+	// Do the rest on ready event (triggered from window, which is usaully the slowest component)
+	router.on('ready', () => {
+		router.on('quit', () => {
+			// Close DB
+			// Handle quit code
+			...
+		})
+	})
+})
 
 ...
 
 // Window script
 
-var $ = require('jquery');
-var Router = require('./router');
-var router = null;
+const $ = require('jquery')
+const Router = require('ElectronRouter')
+let router = Router('WINDOW')
 
 // On window ready
-$(function(){
-	// Instantiate
-    router = new Router('WINDOW');
-    // Send ready event to all registered handlers
-    router.send('ready');
-    ...
+$(() => {
+  // Send ready event to all registered handlers
+  router.send('ready')
+  ...
 
-    $('#updates').on('click', function(){
-    	router.route('/DB', 'POST', $('#userData').data())
-    })
+  $('#updates').on('click', () => {
+  	router.route('POST', '/DB', $('#userData').data())
+  })
 })
 
 ...
 
 // DB script
 
-var Router = require('./router');
-var router = new Router('DB');
+const Router = require('ElectronRouter')
+let router = Router('DB')
 
 ...
 
-router.on('ready', function(){
-	...
-})
+router.on('ready', () => { ... })
 
 // Register trigger for every route on method GET
-route.get('*', function( req, res ){
-	db.find({ id: req.params }, function( err, results ){
-		res.json( err, results );
+route.get('*', ( req, res ) => {
+	db.find({ id: req.params }, ( err, results ) => {
+		res.json( err, results )
 	})
 })
 
 // Receive data on post method, route /DB
-router.post('/DB', function( req, res ){
-	console.log('Received', req.params);
+router.post('/DB', ( req, res ) => {
+	console.log('Received', req.params)
 	// Save data on db
-	db.save( req.params, function( err, result ){
+	db.save( req.params, ( err, result ) => {
 		// Send save result to the triggerer
-		res.json( err, result );
+		res.json( err, result )
 	})
 })
 
