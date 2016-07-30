@@ -1,5 +1,5 @@
 {
-  "name": "ElectronRouter",
+  "name": "electron-router",
   "version": "0.1.0",
   "license": "MIT",
   "description": "Router for Electron shell, useful for MVC",
