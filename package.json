@@ -1,15 +1,15 @@
 {
-  "name": "ElectronRouter",
+  "name": "electron-router",
   "version": "0.1.0",
   "license": "MIT",
   "description": "Router for Electron shell, useful for MVC",
   "author": "Guillermo Blanco",
   "repository": {
     "type": "git",
-    "url": "https://github.com/m0n0l0c0/ElectronRouter.git"
+    "url": "https://github.com/m0n0l0c0/electron-router.git"
   },
   "bugs": {
-    "url": "https://github.com/m0n0l0c0/ElectronRouter/issues",
+    "url": "https://github.com/m0n0l0c0/electron-router/issues",
     "email": "guillermoechegoyenblanco@gmail.com"
   },
   "main": "router.js",
