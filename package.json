@@ -1,6 +1,6 @@
 {
   "name": "ElectronRouter",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "description": "Router for Electron shell, useful for MVC",
   "author": "Guillermo Blanco",
