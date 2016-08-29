@@ -435,7 +435,7 @@ class Router extends EventEmitter {
 	clean( e ){
 
 		let name = `${this._name.toUpperCase()}::CLOSE`
-		DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames(), 'cache', this._cache)
+		DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames())
 		let wins = this._getWindows()
 		ipc && ipc.send && ipc.send( name )
 		// Communicate we are closing, clear ipc too?
@@ -443,9 +443,7 @@ class Router extends EventEmitter {
 		super.removeAllListeners()
 		let win = this._getWindow()
 		win && win.removeListener('onbeforeunload', this.clean)
-		this._cache = this._delayedMsgs = []
-		this._sentCaches = 0
-		DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames(), 'cache', this._cache)
+		DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames())
 		// This ensures we do not interfere in the close process
 		e && (e.returnValue = undefined)
 

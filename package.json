@@ -24,6 +24,7 @@
     "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git"
   },
   "scripts": {
+    "prepublish": "npm test",
     "test": "electron-mocha tests/mainProcess/main.js && electron-mocha --renderer tests/renderer/alone.js && electron-mocha --preload tests/renderer/process.js --renderer tests/renderer/renderer.js"
   }
 }
