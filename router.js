@@ -45,10 +45,6 @@ const DEBUG = function( fn /*, ... */ ){
 	}
 }
 
-function _prepareCache( evtNames, exclude ){
-	return JSON.stringify( lo.difference( evtNames, exclude ) )
-}
-
 function _extractEvts( evt, allEvts ){
 
 	let ret = []
@@ -100,10 +96,7 @@ class Router extends EventEmitter {
 	
 		super()
 
-		this._cache = []
-		this._delayedMsgs = []
 		this._procSide = proc
-		this._sentCaches = 0
 		this._name = name || this._isRenderProcess()
 			?'ROUTER_RENDERER'
 			:'ROUTER_PROCESS'
@@ -129,17 +122,6 @@ class Router extends EventEmitter {
 			win.on('onbeforeunload', this.clean)
 
 		}
-
-		// Here we set the necessary callbacks for retrieving
-		// other side events
-		//  - FROM other side to our store
-		ipc.on( SIDE_EVTS[ this._procSide ].GET, this._handleStoreSet.bind( this ) )
-
-		// - FROM our store to the other side
-		ipc.on( SIDE_EVTS[ 1- this._procSide ].SET, this._handleStoreGet.bind( this ) )
-
-		// having _handleStoreSet, _handleStoreGet allows us to unregister clean
-		this._requestCache()
 
 	}
 
@@ -180,92 +162,6 @@ class Router extends EventEmitter {
 
 		return remote.hasOwnProperty('getCurrentWindow')
 	
-	}
-
-	_handleStoreSet( evt, routes ){
-
-		this._storeOnCache( routes )
-
-	}
-
-	_storeOnCache( routes ){
-
-		DEBUG( '_storeOnCache', 'Storing on cache', 'pre', JSON.stringify( this._cache, null, 2 ) )
-		DEBUG( '_storeOnCache', 'received', JSON.parse(routes) )
-		let route = JSON.parse( routes );
-		route = route.filter( r => -1 === this._cache.indexOf( r ) )
-
-		this._cache = this._cache.concat( route )
-
-		if( ipc && ipc.on ){
-
-			// Register to cached evt
-			ipc.on( route, () => {
-
-				this.emit.apply( this, arguments )
-
-			})
-
-		}
-
-		DEBUG( '_storeOnCache', 'Storing on cache', 'post', JSON.stringify( this._cache, null, 2 ) )
-
-		route = null
-
-	}
-
-	_handleStoreGet( evt, routes ){
-
-		this._sendCache()
-
-	}
-
-	_sendCache(){
-
-		let evt = SIDE_EVTS[ 1- this._procSide ].GET
-		let routes = _prepareCache( super.eventNames(), this._cache )
-		let wins = this._getWindows()
-		DEBUG( '_sendCache', 'Sending cache...', routes, 'sent', this._sentCaches, 'delayed', this._delayedMsgs )
-		// Communicate cache to all windows
-		wins.forEach( w => { w.send( evt, routes ) })
-		// Communicate cache to ipc, we are on
-		ipc && ipc.send && ipc.send( evt, routes );
-
-		// Up to 256 sentCaches, never go down to 0
-		if( 0 === this._sentCaches++ ){
-
-			let len = this._delayedMsgs.length
-			for( let i = 0; i < len; i++ ){
-				let data = this._delayedMsgs.shift()
-				DEBUG( '_sendCache', 'Sending delayedMsgs...', data )
-				this[ data[ 'method' ] ].apply( this, data.arguments )
-			}
-
-		}
-		this._sentCaches = (this._sentCaches % 255) +1
-
-		evt = routes = wins = null;
-
-	}
-
-	_requestCache(){
-
-		// If we are on a different process "routes" is going to be empty
-		// so no route is going to be fired, as every method registers on 
-		// ipc too, we can reconstruct the routes based on ipc channel
-		// Reconstruct all routes
-		
-		let _evt = SIDE_EVTS[ this._procSide ].SET
-		let _wins = this._getWindows()
-		DEBUG( '_requestCache', 'requesting cache...' )
-		// Request cache to all windows
-		_wins.forEach( w => { w.send( _evt ) })
-		
-		// Request cache to ipc
-		ipc && ipc.send && ipc.send( _evt );
-
-		_evt = _wins = null;
-
 	}
 
 	_common( argss, verb ){
@@ -334,94 +230,77 @@ class Router extends EventEmitter {
 			})
 
 		}
-		this._sendCache()
 
 	}
 
 	send( evt ){
 
-		if( this._sentCaches ){		
+		let _evt = evt.trim()
+		let _args = Array.prototype.slice.call( arguments, 1 )
+		let _allEvts = super.eventNames().concat( lo.difference( this._cache, super.eventNames() ) )
+		let _evts = _extractEvts( _evt, _allEvts )
+		let _wins = this._getWindows()
+		let _winsLen = _wins.length
 
-			let _evt = evt.trim()
-			let _args = Array.prototype.slice.call( arguments, 1 )
-			let _allEvts = super.eventNames().concat( lo.difference( this._cache, super.eventNames() ) )
-			let _evts = _extractEvts( _evt, _allEvts )
-			let _wins = this._getWindows()
-			let _winsLen = _wins.length
+		let len = _evts.length
+		for( let i = 0; i < len; i++ ){
+		
+			let msgArr = [ _evts[ i ] ].concat( _args )
 
-			let len = _evts.length
-			for( let i = 0; i < len; i++ ){
-			
-				let msgArr = [ _evts[ i ] ].concat( _args )
+			DEBUG( 'send', 'sending...', msgArr, msgArr.length )
 
-				DEBUG( 'send', 'sending...', msgArr, msgArr.length )
+			// Emit through eventemitter
+			super.emit.apply( this, msgArr )
 
-				// Emit through eventemitter
-				super.emit.apply( this, msgArr )
+			// Emit through windows
+			for( let j = 0; j < _winsLen; j++ ){
+		
+				_wins[ j ].send.apply( _wins[ j ], msgArr )
 
-				// Emit through windows
-				for( let j = 0; j < _winsLen; j++ ){
-			
-					_wins[ j ].send.apply( _wins[ j ], msgArr )
-
-				}
-
-				// Emit through ipc
-				ipc && ipc.send && ipc.send.apply( ipc, msgArr );
-				
 			}
 
-			_evt = _args = _evts = _wins = null
-		
-		}else {
-
-			this._delayedMsgs.push({ method: 'send', arguments: arguments })
-
+			// Emit through ipc
+			ipc && ipc.send && ipc.send.apply( ipc, msgArr );
+			
 		}
 
+		_evt = _args = _evts = _wins = null
+		
 	}
 
 	sendDuplex( evt, data ){
 
-		if( this._sentCaches ){		
+		let _evt = evt.trim()
+		let _args = Array.prototype.slice.call( data.args, 0 )
+		let _origEvt = data.origEvt
+		let _allEvts = super.eventNames().concat( lo.difference( this._cache, super.eventNames() ) )
+		let _evts = _extractEvts( _evt, _allEvts )
+		let _wins = this._getWindows()
+		let _winsLen = _wins.length
 
-			let _evt = evt.trim()
-			let _args = Array.prototype.slice.call( data.args, 0 )
-			let _origEvt = data.origEvt
-			let _allEvts = super.eventNames().concat( lo.difference( this._cache, super.eventNames() ) )
-			let _evts = _extractEvts( _evt, _allEvts )
-			let _wins = this._getWindows()
-			let _winsLen = _wins.length
+		let len = _evts.length
+		for( let i = 0; i < len; i++ ){
+		
+			let msgArr = [ _evts[ i ] ].concat({ origEvt: _origEvt, count: i +1, total: len, data: _args })
 
-			let len = _evts.length
-			for( let i = 0; i < len; i++ ){
-			
-				let msgArr = [ _evts[ i ] ].concat({ origEvt: _origEvt, count: i +1, total: len, data: _args })
+			DEBUG( 'sendDuplex', 'sending...', msgArr )
 
-				DEBUG( 'sendDuplex', 'sending...', msgArr )
+			// Emit through eventemitter
+			super.emit.apply( this, msgArr )
 
-				// Emit through eventemitter
-				super.emit.apply( this, msgArr )
+			// Emit through windows
+			for( let j = 0; j < _winsLen; j++ ){
+		
+				_wins[ j ].send.apply( _wins[ j ], msgArr )
 
-				// Emit through windows
-				for( let j = 0; j < _winsLen; j++ ){
-			
-					_wins[ j ].send.apply( _wins[ j ], msgArr )
-
-				}
-
-				// Emit through ipc
-				ipc && ipc.send && ipc.send.apply( ipc, msgArr );
-				
 			}
 
-			_evt = _args = _evts = _wins = null
-		
-		}else {
-
-			this._delayedMsgs.push({ method: 'sendDuplex', arguments: arguments })
-
+			// Emit through ipc
+			ipc && ipc.send && ipc.send.apply( ipc, msgArr );
+			
 		}
+
+		_evt = _args = _evts = _wins = null
 
 	}
 
@@ -521,7 +400,6 @@ class Router extends EventEmitter {
 
 		DEBUG( 'route', '\non', `${DUP_SND_HEAD}::${route}::${verb}`)
 		DEBUG( 'route', '\nsend', `${DUP_RCV_HEAD}::${route}::${verb}`, params)
-		this._sendCache()
 
 		this.sendDuplex.apply( this, [`${DUP_RCV_HEAD}::${route}::${verb}`].concat( params ) )
 
@@ -552,11 +430,8 @@ class Router extends EventEmitter {
 
 	clean( e ){
 
-		ipc.removeListener( SIDE_EVTS[ this._procSide ].GET, this._handleStoreSet )
-		ipc.removeListener( SIDE_EVTS[ 1- this._procSide ].SET, this._handleStoreGet )
-
 		let name = `${this._name.toUpperCase()}::CLOSE`
-		DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames(), 'cache', this._cache)
+		DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames())
 		let wins = this._getWindows()
 		ipc && ipc.send && ipc.send( name )
 		// Communicate we are closing, clear ipc too?
@@ -564,9 +439,7 @@ class Router extends EventEmitter {
 		super.removeAllListeners()
 		let win = this._getWindow()
 		win && win.removeListener('onbeforeunload', this.clean)
-		this._cache = this._delayedMsgs = []
-		this._sentCaches = 0
-		DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames(), 'cache', this._cache)
+		DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames())
 		// This ensures we do not interfere in the close process
 		e && (e.returnValue = undefined)
 
