@@ -45,10 +45,6 @@ const DEBUG = function( fn /*, ... */ ){
 	}
 }
 
-function _prepareCache( evtNames, exclude ){
-	return JSON.stringify( lo.difference( evtNames, exclude ) )
-}
-
 function _extractEvts( evt, allEvts ){
 
 	let ret = []
