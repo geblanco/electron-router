@@ -254,8 +254,8 @@ class Router extends EventEmitter {
 
 			// Emit through windows
 			for( let j = 0; j < _winsLen; j++ ){
-		
-				_wins[ j ].send.apply( _wins[ j ], msgArr )
+				// we can be overwritten while sending...
+				if( -1 !== this._getWindows().indexOf( _wins[ j ] ) ) _wins[ j ].send.apply( _wins[ j ], msgArr )
 
 			}
 
@@ -290,8 +290,8 @@ class Router extends EventEmitter {
 
 			// Emit through windows
 			for( let j = 0; j < _winsLen; j++ ){
-		
-				_wins[ j ].send.apply( _wins[ j ], msgArr )
+				// we can be overwritten while sending...
+				if( -1 !== this._getWindows().indexOf( _wins[ j ] ) ) _wins[ j ].send.apply( _wins[ j ], msgArr )
 
 			}
 
@@ -323,8 +323,8 @@ class Router extends EventEmitter {
 
 		// Emit through windows
 		for( let j = 0; j < _winsLen; j++ ){
-	
-			_wins[ j ].send.apply( _wins[ j ], msgArr )
+			// we can be overwritten while sending...
+			if( -1 !== this._getWindows().indexOf( _wins[ j ] ) ) _wins[ j ].send.apply( _wins[ j ], msgArr )
 
 		}
 
