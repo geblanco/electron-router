@@ -23,8 +23,12 @@
     "should": "^9.0.2",
     "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git#441261b411aced775416fcbb5b79843c80c8e116"
   },
+  "keywords": ["electron", "router", "mvc", "callback"],
   "scripts": {
     "prepublish": "npm test",
-    "test": "electron-mocha tests/mainProcess/main.js; electron-mocha --renderer tests/renderer/alone.js; electron-mocha --preload tests/renderer/process.js --renderer tests/renderer/renderer.js"
+    "test-process": "electron-mocha --require tests/coverage.js tests/mainProcess/main.js && mv coverage/coverage-final.json coverage/coverage-process.json",
+    "test-renderer-alone": "electron-mocha --require tests/coverage.js --renderer tests/renderer/alone.js && mv coverage/coverage-final.json coverage/coverage-alone.json",
+    "test-renderer-complex": "electron-mocha --require tests/coverage.js --preload tests/renderer/process.js --renderer tests/renderer/renderer.js && mv coverage/coverage-final.json coverage/coverage-complex.json",
+    "test": "npm run test-process && npm run test-renderer-alone && npm run test-renderer-complex && istanbul report"
   }
 }
