@@ -1,4 +1,7 @@
 # ElectronRouter
+
+[![codecov](https://codecov.io/gh/m0n0l0c0/electron-router/branch/master/graph/badge.svg)](https://codecov.io/gh/m0n0l0c0/electron-router)
+
 Router solving Electron shell callback passing, helpfull for MVC
 
 # Contents

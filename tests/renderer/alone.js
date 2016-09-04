@@ -1,6 +1,5 @@
 'use strict'
 
-//require('./fixRequire')
 const should = require('should')
 const router = require( __dirname + '/../../router')('TEST')
 
