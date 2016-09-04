@@ -21,7 +21,7 @@
   "devDependencies": {
     "electron-packager": "^5.1.0",
     "should": "^9.0.2",
-    "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git#441261b411aced775416fcbb5b79843c80c8e116"
+    "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git#v2.4.0"
   },
   "keywords": ["electron", "router", "mvc", "callback"],
   "scripts": {
