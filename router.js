@@ -2,18 +2,21 @@
 (function( factory ){
 
   if( typeof module !== 'undefined' && typeof module.exports !== 'undefined' ){
-  	let ele = require('electron')
-  	let ipc = ele.ipcMain
-  	let proc = 1
-  	let remote = { BrowserWindow : ele.BrowserWindow }
-  	if( !ipc ){
-  		proc = 0
-  		ipc = ele.ipcRenderer
-  		remote = ele.remote
-  	}
-    module.exports = factory( require('eventemitter3'), ipc, remote, require('lodash'), require('node-uuid'), proc )
-  }
-  else{
+  	try{
+	  	let ele = require('electron')
+	  	let ipc = ele.ipcMain
+	  	let proc = 1
+	  	let remote = { BrowserWindow : ele.BrowserWindow }
+	  	if( !ipc ){
+	  		proc = 0
+	  		ipc = ele.ipcRenderer
+	  		remote = ele.remote
+	  	}
+	    module.exports = factory( require('eventemitter3'), ipc, remote, require('lodash'), require('node-uuid'), proc )
+	  }catch( e ){
+  		throw new Error('This module only works on an Electron environment!!', e)
+	  } 
+  }else{
   	throw new Error('This module only works on an Electron environment!!')
   }
 

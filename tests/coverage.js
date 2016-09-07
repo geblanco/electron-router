@@ -11,14 +11,18 @@ const { Reporter, Instrumenter, Collector, hook } = require('istanbul')
 const { keys } = Object
 
 function isRenderProcess(){
-  let ele = require('electron')
-  let ipc = ele.ipcMain
-  let remote = { BrowserWindow : ele.BrowserWindow }
-  if( !ipc ){
-    ipc = ele.ipcRenderer
-    remote = ele.remote
-  }
-  return remote.hasOwnProperty('getCurrentWindow')
+  let ret = false
+  try{
+    let ele = require('electron')
+    let ipc = ele.ipcMain
+    let remote = { BrowserWindow : ele.BrowserWindow }
+    if( !ipc ){
+      ipc = ele.ipcRenderer
+      remote = ele.remote
+    }
+    ret = remote.hasOwnProperty('getCurrentWindow')
+  }catch( ex ){}
+  finally{ return ret }
 }
 
 
