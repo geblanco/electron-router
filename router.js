@@ -364,23 +364,29 @@ class Router extends EventEmitter {
 		let caller = (function( router, uuid, cb ){
 
 			let results = []
+			let errored = null
+
 			let fn = function fn( data ){
 
-				DEBUG( 'route', 'back fn', arguments, JSON.stringify( data, null, 2 ), results )
-				results.push( data.data[ 1 ] )
-				// Data from caller comes like data: { data: [ err, result ] }
-				// If one errored finish immediately
-				// Or we are on the last callback, clean aux routes
-				if( data.data[ 0 ] || data.count === data.total ){
+				if( !errored ){
 
-					!(data.data[ 0 ]) || ( results = [ data.data[ 0 ] ] )
-					data.data[ 0 ] || ( results = [ null, results.length > 1?results:results[0] ] )
-					router.removeListener( `${uuid}`, fn )
-					DEBUG( 'route', 'back fn', 'data', data, 'sending', results)
-					cb.apply( cb, results )
-					
-					router = cb = results = null
-					clearTimeout( timer )
+					DEBUG( 'route', 'back fn', arguments, JSON.stringify( data, null, 2 ), results )
+					results.push( data.data[ 1 ] )
+					// Data from caller comes like data: { data: [ err, result ] }
+					// If one errored finish immediately
+					// Or we are on the last callback, clean aux routes
+					if( data.data[ 0 ] || data.count === data.total ){
+
+						!(data.data[ 0 ]) || ( results = [ data.data[ 0 ] ] )
+						data.data[ 0 ] || ( results = [ null, results.length > 1?results:results[0] ] )
+						DEBUG( 'route', 'back fn', 'data', data, 'sending', results)
+						router.removeListener( `${uuid}`, fn )
+						cb.apply( cb, results )
+						
+						router = cb = results = errored = qnull
+						clearTimeout( timer )
+
+					}
 
 				}
 
@@ -391,6 +397,7 @@ class Router extends EventEmitter {
 
 				cb.apply( cb, [new Error('Timeout - 200ms elapsed')] )
 				router.removeListener( `${uuid}`, fn )
+				errored = true
 				router = cb = null
 
 			}, 200)
