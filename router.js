@@ -383,7 +383,7 @@ class Router extends EventEmitter {
 						router.removeListener( `${uuid}`, fn )
 						cb.apply( cb, results )
 						
-						router = cb = results = errored = qnull
+						router = cb = results = errored = null
 						clearTimeout( timer )
 
 					}
@@ -412,6 +412,24 @@ class Router extends EventEmitter {
 		DEBUG( 'route', '\nsend', `${DUP_RCV_HEAD}::${route}::${verb}`, params)
 
 		this.sendDuplex.apply( this, [`${DUP_RCV_HEAD}::${route}::${verb}`].concat( params ) )
+
+	}
+
+
+	removeListener( evt, handler, ctx ){
+
+		super.removeListener( evt, handler, ctx )
+
+		if( this._isRenderProcess() ){
+
+			let win = this._getWindow()
+			win.removeListener( evt, handler )
+
+		}else{
+
+			ipc.removeListener( evt, handler )
+
+		}
 
 	}
 
