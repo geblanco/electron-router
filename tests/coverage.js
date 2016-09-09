@@ -10,19 +10,22 @@ const { readFileSync: read, realpathSync } = require('fs')
 const { Reporter, Instrumenter, Collector, hook } = require('istanbul')
 const { keys } = Object
 
-function isRenderProcess(){
-  let ele = require('electron')
-  let ipc = ele.ipcMain
-  let remote = { BrowserWindow : ele.BrowserWindow }
-  if( !ipc ){
-    ipc = ele.ipcRenderer
-    remote = ele.remote
-  }
-  return remote.hasOwnProperty('getCurrentWindow')
+function isRenderProcess () {
+  let ret = false
+  try {
+    let ele = require('electron')
+    let ipc = ele.ipcMain
+    let remote = { BrowserWindow: ele.BrowserWindow }
+    if (!ipc) {
+      ipc = ele.ipcRenderer
+      remote = ele.remote
+    }
+    ret = remote.hasOwnProperty('getCurrentWindow')
+  } catch (ex) {}
+  return ret
 }
 
-
-function match(){
+function match () {
   const map = {}
   const fn = function (file) { return map[file] }
   fn.files = []
@@ -34,7 +37,7 @@ function match(){
   return fn
 }
 
-function report( evt, coverage ){
+function report (evt, coverage) {
   const cov = global.__coverage__ || coverage
   for (let file of matched.files) {
     if (!cov[file]) {
@@ -50,8 +53,8 @@ function report( evt, coverage ){
   const collector = new Collector()
   collector.add(cov)
 
-  //const cfg = null, dir = isRenderProcess()?'./coverage_renderer':null
-  //const reporter = new Reporter( cfg, dir )
+  // const cfg = null, dir = isRenderProcess()?'./coverage_renderer':null
+  // const reporter = new Reporter( cfg, dir )
   const reporter = new Reporter()
   reporter.addAll(['text-summary', 'json'])
   reporter.write(collector, true, () => {})
@@ -62,7 +65,7 @@ function report( evt, coverage ){
 const root = require('path').resolve(__dirname, '..', '..')
 const pattern = 'router.js'
 // '{!(node_modules|coverage|test)/**,tests/**.js}/!(coverage).js'
-//'{!(node_modules|coverage)/**,.}/!(coverage).js'
+// '{!(node_modules|coverage)/**,.}/!(coverage).js'
 const matched = match()
 
 const instrumenter = new Instrumenter()
@@ -70,5 +73,5 @@ const transformer = instrumenter.instrumentSync.bind(instrumenter)
 
 hook.hookRequire(matched, transformer, {})
 
-if( isRenderProcess() ) window.emitter.on('mocha-cover', report)
+if (isRenderProcess()) window.emitter.on('mocha-cover', report)
 else process.on('exit', report)

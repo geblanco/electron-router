@@ -1,6 +1,7 @@
 # ElectronRouter
 
 [![codecov](https://codecov.io/gh/m0n0l0c0/electron-router/branch/master/graph/badge.svg)](https://codecov.io/gh/m0n0l0c0/electron-router)
+[![JavaScript Style Guide](https://img.shields.io/badge/code%20style-standard-brightgreen.svg)](http://standardjs.com/)
 
 Router solving Electron shell callback passing, helpfull for MVC
 
@@ -87,7 +88,7 @@ For every route/event it is possible register wildcard ('*')
 #### Instance
 ```
 // Constructs the object setting its name
-let Router = require('ElectronRouter')
+let Router = require('electron-router')
 
 // Returns the static instance
 let router = Router( name )
@@ -137,14 +138,14 @@ router.delete( route, ( req, res ) => {}) // must call res.json( err, result )
 ```
 // On every module that uses the router
 // Import it
-let Router = require('ElectronRouter')
+let Router = require('electron-router')
 
 // Main script
 
 cons electron = require('electron')
 const BrowserWindow = electron.BrowserWindow
 const app = electron.app
-const Router = require('router')
+const Router = require('electron-router')
 let router = Router('MAIN')
 let mainWindow = null
 
@@ -173,7 +174,7 @@ app.on('ready', () => {
 // Window script
 
 const $ = require('jquery')
-const Router = require('ElectronRouter')
+const Router = require('electron-router')
 let router = Router('WINDOW')
 
 // On window ready
@@ -191,7 +192,7 @@ $(() => {
 
 // DB script
 
-const Router = require('ElectronRouter')
+const Router = require('electron-router')
 let router = Router('DB')
 
 ...
