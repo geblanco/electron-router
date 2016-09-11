@@ -25,7 +25,11 @@
   // Constants
   const DUP_RCV_HEAD = 'DUPLEX::RCV'
   const DUP_SND_HEAD = 'DUPLEX::SND'
-
+  const defaultCfg = {
+    timeoutEnabled: true,
+    timeoutTime: 200,
+    _mod: false
+  }
   // Utils
   const DEBUG = function (fn) {
     let args = Array.prototype.slice.call(arguments, 0)
@@ -88,7 +92,7 @@
 
   class Router extends EventEmitter {
 
-    constructor (name, proc) {
+    constructor (name, proc, cfg) {
       super()
 
       this._procSide = proc
@@ -96,23 +100,32 @@
         ? 'ROUTER_RENDERER'
         : 'ROUTER_PROCESS'
 
+      this._config = {}
       this.routes = {
         post: (...args) => { this.route.apply(this, ['post'].concat(args)) },
         get: (...args) => { this.route.apply(this, ['get'].concat(args)) },
         update: (...args) => { this.route.apply(this, ['update'].concat(args)) },
         delete: (...args) => { this.route.apply(this, ['delete'].concat(args)) }
       }
-      this._setup()
+      this._setup(true, cfg)
     }
 
-    _setup () {
-      if (this._isRenderProcess()) {
-        let win = this._getWindow()
-        // TODO => Check if this really works,
-        // is the close evt triggered on the current window?
+    _setup (firstTime, cfg) {
+      firstTime = !!firstTime
+      if (firstTime) {
+        // Register window close handler
+        if (this._isRenderProcess()) {
+          let win = this._getWindow()
+          // TODO => Check if this really works,
+          // is the close evt triggered on the current window?
 
-        win.on('onbeforeunload', this.clean)
+          win.on('close', this.clean)
+        }
       }
+      // Parse and setup config
+      this._config = lo.pick(lo.merge(this._config, defaultCfg, cfg), Object.keys(defaultCfg))
+      this._config._mod = !lo.isEqual(this._config, defaultCfg)
+      DEBUG('_setup', 'config', this._config)
     }
 
     _getWindows () {
@@ -143,7 +156,7 @@
     _common (argss, verb) {
       var args = Array.prototype.slice.call(argss, 0)
 
-      if (args.length === 1) {
+      if (args.length <= 1) {
         throw new Error('Bad arguments, MUST provide a route and a callback')
       }
 
@@ -181,6 +194,10 @@
           // callback = router = route = verb = req = res = null
         }
       })(cb, this, route, verb), ctx)
+    }
+
+    applyConfig (cfg) {
+      cfg && this._setup(false, cfg)
     }
 
     on (evt, listener, ctx) {
@@ -311,6 +328,7 @@
       let caller = (function (router, uuid, cb) {
         let results = []
         let errored = null
+        let timer = 0
 
         let fn = function fn (data) {
           if (!errored) {
@@ -333,12 +351,14 @@
         }
         // If we are not called back within 200 ms
         // trigger error
-        let timer = setTimeout(function () {
-          cb.apply(cb, [new Error('Timeout - 200ms elapsed')])
-          router.removeListener(`${uuid}`, fn)
-          errored = true
-          router = cb = null
-        }, 200)
+        if (router._config.timeoutEnabled) {
+          timer = setTimeout(function () {
+            cb.apply(cb, [new Error(`Timeout - ${router._config.timeoutTime}ms elapsed`)])
+            router.removeListener(`${uuid}`, fn)
+            errored = true
+            router = cb = null
+          }, router._config.timeoutTime)
+        }
 
         return fn
       })(this, transactionId, cb)
@@ -387,20 +407,30 @@
       wins.forEach(w => { w.send(name) })
       super.removeAllListeners()
       let win = this._getWindow()
-      win && win.removeListener('onbeforeunload', this.clean)
+      win && win.removeListener('close', this.clean)
       DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames())
       // This ensures we do not interfere in the close process
       e && (e.returnValue = undefined)
+      // Reset config
+      this._config = defaultCfg
     }
   }
 
   var _router = null
 
-  return name => {
-    // TODO => Think on name and window setup (ie: registerWindow??)
-    // TODO => Queue of sent events for late on'ss
+  // TODO => Think on name and window setup (ie: registerWindow??)
+  // TODO => Queue of sent events for late on'ss
+  return (name, cfg) => {
+    // Little parse
+    if (cfg === undefined && typeof name === 'object') {
+      cfg = name
+      name = null
+    }
     if (!_router) {
-      _router = new Router(name, procSide)
+      _router = new Router(name, procSide, cfg || {})
+    } else if (cfg && !_router._config._mod) {
+      // Only allow config changes if there were not another config
+      _router._setup(false, cfg)
     }
 
     return _router

@@ -173,9 +173,6 @@ describe('Renderer Process Alone', () => {
     })
   })
 
-  // TODO => impl and test timeout function with test,
-  // if one side of the pipe is not called within 200ms
-  // call it with err: ETimeOut
   describe('Duplex Communication', () => {
     describe('Data Types', () => {
       // VERB: GET
