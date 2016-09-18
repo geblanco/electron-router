@@ -16,7 +16,7 @@
       throw new Error('This module only works on an Electron environment!!', e)
     }
   } else {
-    throw new Error('This module only works on an Electron environment!!')
+    throw new Error('This module only works on an Node-Electron environment!!')
   }
 })(function (EventEmitter, ipc, remote, lo, uuid, procSide) {
 
@@ -157,7 +157,7 @@
       var args = Array.prototype.slice.call(argss, 0)
 
       if (args.length <= 1) {
-        throw new Error('Bad arguments, MUST provide a route and a callback')
+        throw new Error('Bad arguments, invalid number of arguments, expecting at least 1, got 0. MUST provide a route, a method and a callback')
       }
 
       let route = args.shift()
@@ -170,7 +170,7 @@
       }
 
       if (typeof cb !== 'function') {
-        throw new Error('Bad arguments, MUST provide a route and a callback')
+        throw new Error('Bad arguments, callback must be a function, MUST provide a route and a callback')
       }
       DEBUG('_common',
         '\n_commonreg', 'on', `${DUP_RCV_HEAD}::${route}::${verb.toUpperCase()}`,
@@ -312,7 +312,7 @@
     route () {
       let args = Array.prototype.slice.call(arguments, 0)
       if (args.length < 3) {
-        throw new Error('Bad arguments, MUST provide a route, a method and a callback')
+        throw new Error(`Bad arguments, invalid number of arguments, expecting at least 3, got ${args.length}. MUST provide a route, a method and a callback`)
       }
       // Extract verb
       let verb = args.shift().toUpperCase()
@@ -330,6 +330,11 @@
 
       // Extract callback
       let cb = args.pop()
+
+      if (typeof cb !== 'function') {
+        throw new Error('Bad arguments, callback must be a function, MUST provide a route and a callback')
+      }
+
       let caller = (function (router, uuid, cb) {
         let results = []
         let errored = null
