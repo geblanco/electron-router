@@ -186,7 +186,12 @@
                 err = null
               }
               DEBUG('_common', 'On the json end', arguments)
-              router.sendDuplexBack(`${DUP_SND_HEAD}::${route}::${verb.toUpperCase()}`, { origEvt: evt.origEvt, count: evt.count, total: evt.total }, err, JSON.parse(JSON.stringify(obj)))
+              router.sendDuplexBack(
+                `${DUP_SND_HEAD}::${route}::${verb.toUpperCase()}`,
+                { origEvt: evt.origEvt, count: evt.count, total: evt.total },
+                err,
+                obj?JSON.parse(JSON.stringify(obj)):undefined
+              )
             }
           }
 
