@@ -11,7 +11,7 @@
         ipc = ele.ipcRenderer
         remote = ele.remote
       }
-      module.exports = factory(require('eventemitter3'), ipc, remote, require('lodash'), require('node-uuid'), proc)
+      module.exports = factory(require('eventemitter3'), ipc, remote, require('lodash'), require('uuid'), proc)
     } catch (e) {
       throw new Error('This module only works on an Electron environment!!', e)
     }

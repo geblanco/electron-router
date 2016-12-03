@@ -15,12 +15,11 @@
   "main": "router.js",
   "dependencies": {
     "eventemitter3": "git+https://github.com/m0n0l0c0/eventemitter3.git",
-    "node-uuid": "^1.4.7",
-    "lodash": "^4.13.1"
+    "lodash": "^4.13.1",
+    "uuid": "^3.0.0"
   },
   "devDependencies": {
     "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git#v2.4.0",
-    "electron-packager": "^5.1.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.0.2",
     "require-no-cache": "^0.2.1",
