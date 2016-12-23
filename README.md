@@ -39,7 +39,7 @@ One example of this is when you have a database and want to query it from the wi
 
 After some brainstorming, the solution I came to was designing the Router, it gives similar options to [express](http://expressjs.com/). I've made a diagram to help visualize all this.
 
-![problem solution](router.png)
+![diagram explaining the problem](router.png)
 
 ### The solution
 The router just triggers the functions you register on by sending events and parameters. Allowing easy message/data passing and respecting the event/callback Electron architecture.
@@ -223,7 +223,7 @@ Any help is welcome, just send a pull request (please document a little what you
 
 ## Future
 In the future it could be great to support:
-* MVC frameworks integration (Backbone...) (Should not be too difficult, overwrite sync method on Collections)
+* ~~MVC frameworks integration (Backbone...) (Should not be too difficult, overwrite sync method on Collections)~~ [erbs](https://github.com/m0n0l0c0/erbs)
 * Template rendering (i.e.: ```res.render(data)```)
 
 ## Notes
