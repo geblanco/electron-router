@@ -48,7 +48,7 @@ The router just triggers the functions you register on by sending events and par
 
 ### Wildcards
 Every sent/listened message can use wildcards
-```
+```javascript
 router.on('loading::start', () => { console.log('start loading...') }
 router.on('loading::continue', () => { console.log('continue loading...') }
 router.on('loading::end', () => { console.log('end loading...') }
@@ -65,7 +65,7 @@ You can send messages unidirectionally from the main process to the renderer pro
 
 #### Duplex communication with channels
 
-```
+```javascript
 router.get('config::*')
 router.post('config', ( req, res ) => {
 	// req.params contain sent parameters
@@ -86,7 +86,7 @@ HTTP Verbs are used just as different channels and for completness (equality to 
 For every route/event it is possible register wildcard ('*')
 
 #### Instance
-```
+```javascript
 // Constructs the object setting its name
 let Router = require('electron-router')
 
@@ -95,7 +95,7 @@ let router = Router( name )
 ```
 
 #### Simple communication
-```
+```javascript
 // Triggers/Sends a message on the given event name passing provided messages.
 router.send( event, msg1, msg2... )
 
@@ -105,7 +105,7 @@ router.on( event, ( msg1, msg2... ) => {})
 ```
 
 #### Duplex communication
-```
+```javascript
 // Triggers/Sends a message to the given route on the given method (channel, HTTP Verbs)
 // passing the given messages to that channel/route handler. 
 // Callback is called with err/result when the handler calls res.json()
@@ -135,14 +135,14 @@ router.delete( route, ( req, res ) => {}) // must call res.json( err, result )
 
 ## Examples
 
-```
+```javascript
 // On every module that uses the router
 // Import it
 let Router = require('electron-router')
 
 // Main script
 
-cons electron = require('electron')
+const electron = require('electron')
 const BrowserWindow = electron.BrowserWindow
 const app = electron.app
 const Router = require('electron-router')
