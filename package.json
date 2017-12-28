@@ -33,7 +33,7 @@
     "callback"
   ],
   "scripts": {
-    "prepublish": "npm test",
+    "prepublishOnly": "npm test",
     "test-env": "./node_modules/mocha/bin/mocha --require tests/coverage.js tests/env/main.js && mv coverage/coverage-final.json coverage/coverage-env.json",
     "test-config": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js tests/config/main.js && mv coverage/coverage-final.json coverage/coverage-conf.json",
     "test-errors": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js tests/errors/params.js && mv coverage/coverage-final.json coverage/coverage-errors.json",
