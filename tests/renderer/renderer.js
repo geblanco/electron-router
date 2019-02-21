@@ -91,11 +91,11 @@ describe('Renderer Process Complex', () => {
 
           should.exist(res)
           res.should.be.a.Object().and.have.property('json').which.is.a.Function()
+
+          router.on('doubleCommTest-0-end', done)
           res.json(reqResult)
         })
-
         router.send('doubleCommTest-0')
-        router.on('doubleCommTest-0-end', done)
       })
       // VERB: POST
       it('should receive an object of data', (done) => {
@@ -108,11 +108,12 @@ describe('Renderer Process Complex', () => {
 
           should.exist(res)
           res.should.be.a.Object().and.have.property('json').which.is.a.Function()
+
+          router.on('doubleCommTest-1-end', done)
           res.json(reqResult)
         })
 
         router.send('doubleCommTest-1')
-        router.on('doubleCommTest-1-end', done)
       })
       // VERB: UPDATE
       it('should receive a nested object of data', (done) => {
@@ -125,11 +126,12 @@ describe('Renderer Process Complex', () => {
 
           should.exist(res)
           res.should.be.a.Object().and.have.property('json').which.is.a.Function()
+
+          router.on('doubleCommTest-2-end', done)
           res.json(reqResult)
         })
 
         router.send('doubleCommTest-2')
-        router.on('doubleCommTest-2-end', done)
       })
       // VERB: DELETE
       it('should receive an array of data', (done) => {
@@ -142,11 +144,12 @@ describe('Renderer Process Complex', () => {
 
           should.exist(res)
           res.should.be.a.Object().and.have.property('json').which.is.a.Function()
+
+          router.on('doubleCommTest-3-end', done)
           res.json(reqResult)
         })
 
         router.send('doubleCommTest-3')
-        router.on('doubleCommTest-3-end', done)
       })
     })
 
@@ -157,7 +160,6 @@ describe('Renderer Process Complex', () => {
         let reqResult = 'ok'
 
         router.get('doubleComm-multiple-calls', (req, res) => {
-          // console.log('e', req, res)
           should.exist(req)
           req.should.be.a.Object().and.containDeepOrdered({ method: 'GET', params: [] })
           req.params.should.be.a.instanceOf(Array).and.containDeepOrdered([ sent ])
@@ -167,8 +169,8 @@ describe('Renderer Process Complex', () => {
           res.json(reqResult)
         })
 
-        router.send('doubleCommTest-multiple-calls', testCalls)
         router.on('doubleCommTest-multiple-calls-end', done)
+        router.send('doubleCommTest-multiple-calls', testCalls)
       })
     })
   })
