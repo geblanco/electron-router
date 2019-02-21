@@ -15,13 +15,13 @@
   "main": "router.js",
   "dependencies": {
     "eventemitter3": "git+https://github.com/m0n0l0c0/eventemitter3.git",
-    "lodash": "^4.13.1",
+    "lodash": "^4.17.11",
     "uuid": "^3.0.0"
   },
   "devDependencies": {
-    "electron-mocha": "git+https://github.com/m0n0l0c0/electron-mocha.git#v2.4.0",
+    "electron-mocha": "^6.0.4",
     "istanbul": "^0.4.5",
-    "mocha": "^3.0.2",
+    "mocha": "^6.0.1",
     "require-no-cache": "^0.2.1",
     "should": "^9.0.2",
     "standard": "^8.0.0"
@@ -38,8 +38,8 @@
     "test-config": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js tests/config/main.js && mv coverage/coverage-final.json coverage/coverage-conf.json",
     "test-errors": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js tests/errors/params.js && mv coverage/coverage-final.json coverage/coverage-errors.json",
     "test-process": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js tests/mainProcess/main.js && mv coverage/coverage-final.json coverage/coverage-process.json",
-    "test-renderer-alone": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js --renderer tests/renderer/alone.js && mv coverage/coverage-final.json coverage/coverage-alone.json",
-    "test-renderer-complex": "./node_modules/electron-mocha/bin/electron-mocha --require tests/coverage.js --preload tests/renderer/process.js --renderer tests/renderer/renderer.js && mv coverage/coverage-final.json coverage/coverage-complex.json",
+    "test-renderer-alone": "./node_modules/electron-mocha/bin/electron-mocha --renderer tests/renderer/alone.js",
+    "test-renderer-complex": "./node_modules/electron-mocha/bin/electron-mocha --preload tests/renderer/process.js --renderer tests/renderer/renderer.js",
     "test": "standard && npm run test-env && npm run test-config && npm run test-errors && npm run test-process && npm run test-renderer-alone && npm run test-renderer-complex && istanbul report"
   }
 }
