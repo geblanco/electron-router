@@ -107,6 +107,8 @@
         update: (...args) => { this.route.apply(this, ['update'].concat(args)) },
         delete: (...args) => { this.route.apply(this, ['delete'].concat(args)) }
       }
+      // Bind clean to instance to make it usable as event handler
+      this.clean = this.clean.bind(this)
       this._setup(true, cfg)
     }
 
