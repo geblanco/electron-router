@@ -6,7 +6,11 @@
 const should = require('should')
 /* eslint-enable no-unused-vars */
 const path = require('path')
-const router = require(path.join(__dirname, '/../../router'))('TEST')
+const requireNC = require('require-no-cache')
+
+let router = requireNC(path.join(__dirname, '/../../router'))('TEST')
+let ele = require('electron')
+let ipc = ele.ipcMain ? ele.ipcMain : ele.ipcRenderer
 
 describe('Renderer Process Alone', () => {
   describe('Simplex Communication', () => {
@@ -169,6 +173,21 @@ describe('Renderer Process Alone', () => {
           done()
         })
         router.send('should::match::this', data)
+      })
+    })
+
+    describe('Callback removal', () => {
+      it('should remove the installed callback', (done) => {
+        let data = '5js2q4k'
+        router.on('simpleCommTest', function handler (args) {
+          args.should.be.a.String().and.be.exactly(data)
+          router.clean()
+          router.removeListener('simpleCommTest', handler)
+          should.equal(router._eventsCount, 0)
+          should.equal(ipc._eventsCount, 0)
+          done()
+        })
+        router.send('simpleCommTest', data)
       })
     })
   })
@@ -468,6 +487,7 @@ describe('Renderer Process Alone', () => {
         let reqResult = 'ok'
         let firstCall = null
         let secondCall = null
+        router = requireNC(path.join(__dirname, '/../../router'))('TEST', {timeoutTime: 300})
 
         router.get('this::will::yes::be::called', (req, res) => {
           should.exist(req)
