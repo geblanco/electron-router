@@ -90,6 +90,18 @@
     return lo.uniq(ret)
   }
 
+  class DefaultDict {
+    constructor (DefaultInit) {
+      return new Proxy({}, {
+        get: (target, name) => name in target
+          ? target[name]
+          : (target[name] = typeof DefaultInit === 'function'
+            ? new DefaultInit().valueOf()
+            : DefaultInit)
+      })
+    }
+  }
+
   class Router extends EventEmitter {
 
     constructor (name, proc, cfg) {
@@ -101,6 +113,7 @@
         : 'ROUTER_PROCESS'
 
       this._config = {}
+      this._cache = new DefaultDict(Array)
       this.routes = {
         post: (...args) => { this.route.apply(this, ['post'].concat(args)) },
         get: (...args) => { this.route.apply(this, ['get'].concat(args)) },
@@ -165,6 +178,7 @@
       let route = args.shift()
       let ctx = args.pop()
       let cb = args.pop()
+      let dupRecRoute = `${DUP_RCV_HEAD}::${route}::${verb.toUpperCase()}`
 
       if (cb === undefined) {
         cb = ctx
@@ -178,8 +192,9 @@
         '\n_commonreg', 'on', `${DUP_RCV_HEAD}::${route}::${verb.toUpperCase()}`,
         '\n_commonreg', 'send', `${DUP_SND_HEAD}::${route}::${verb.toUpperCase()}`
       )
-      this.on(`${DUP_RCV_HEAD}::${route}::${verb.toUpperCase()}`, (function (callback, router, route, verb) {
-        return function (evt) {
+
+      this.on(dupRecRoute, (function (callback, router, route, verb) {
+        function handler (evt) {
           let req = { method: verb, params: Array.prototype.slice.call(evt.data, 0) }
           let res = {
             json: function (err, obj) {
@@ -200,6 +215,8 @@
           callback(req, res)
           // callback = router = route = verb = req = res = null
         }
+        router._cache[dupRecRoute].push(handler)
+        return handler
       })(cb, this, route, verb), ctx)
     }
 
@@ -212,19 +229,14 @@
       // do not register => trigger directly, Event Queue
       super.on(evt, listener, ctx)
       if (ipc && ipc.on) {
-        ipc.on(evt, function (event) {
-          let args = Array.prototype.slice.call(arguments, 1)
-          DEBUG('on', 'inside ipc on', evt, args)
-          listener.apply(ctx, args)
-          args = event = null
-        })
+        ipc.on(evt, listener)
       }
     }
 
     send (evt) {
       let _evt = evt.trim()
       let _args = Array.prototype.slice.call(arguments, 1)
-      let _allEvts = super.eventNames().concat(lo.difference(this._cache, super.eventNames()))
+      let _allEvts = super.eventNames().concat(lo.difference(Object.keys(this._cache), super.eventNames()))
       let _evts = _extractEvts(_evt, _allEvts)
       let _wins = this._getWindows()
       let _winsLen = _wins.length
@@ -255,7 +267,7 @@
       let _evt = evt.trim()
       let _args = Array.prototype.slice.call(data.args, 0)
       let _origEvt = data.origEvt
-      let _allEvts = super.eventNames().concat(lo.difference(this._cache, super.eventNames()))
+      let _allEvts = super.eventNames().concat(lo.difference(Object.keys(this._cache), super.eventNames()))
       let _evts = _extractEvts(_evt, _allEvts)
       let _wins = this._getWindows()
       let _winsLen = _wins.length
@@ -320,8 +332,8 @@
       let verb = args.shift().toUpperCase()
       // Extract route
       let route = args.shift()
-      let transactionId = uuid()
-      let params = { origEvt: `${transactionId}`, args: [] }
+      let transactionId = `${uuid()}`
+      let params = { origEvt: transactionId, args: [] }
 
       // Extract arguments
       let len = args.length - 1
@@ -337,7 +349,7 @@
         throw new Error('Bad arguments, callback must be a function, MUST provide a route and a callback')
       }
 
-      let caller = (function (router, uuid, cb) {
+      let caller = (function (router, transactionId, cb) {
         let results = []
         let errored = null
         let timer = 0
@@ -353,7 +365,7 @@
               !(data.data[ 0 ]) || (results = [ data.data[ 0 ] ])
               data.data[ 0 ] || (results = [ null, results.length > 1 ? results : results[0] ])
               DEBUG('route', 'back fn', 'data', data, 'sending', results)
-              router.removeListener(`${uuid}`, fn)
+              router.removeListener(transactionId, fn)
               cb.apply(cb, results)
 
               router = cb = results = errored = null
@@ -366,7 +378,7 @@
         if (router._config.timeoutEnabled) {
           timer = setTimeout(function () {
             cb.apply(cb, [new Error(`Timeout - ${router._config.timeoutTime}ms elapsed`)])
-            router.removeListener(`${uuid}`, fn)
+            router.removeListener(transactionId, fn)
             errored = true
             router = cb = null
           }, router._config.timeoutTime)
@@ -375,7 +387,7 @@
         return fn
       })(this, transactionId, cb)
 
-      this.on(`${transactionId}`, caller)
+      this.on(transactionId, caller)
 
       DEBUG('route', '\non', `${DUP_SND_HEAD}::${route}::${verb}`)
       DEBUG('route', '\nsend', `${DUP_RCV_HEAD}::${route}::${verb}`, params)
@@ -384,14 +396,46 @@
     }
 
     removeListener (evt, handler, ctx) {
-      super.removeListener(evt, handler, ctx)
+      // Try to remove the event "as is"
+      // duplex events must be removed with `removeDuplexListener`,
+      // by now, we try to remove it normally, and if it fails we try it
+      // on duplex comm, in the future it could be specified
 
-      if (this._isRenderProcess()) {
+      const eventsCount = super.__eventsCount
+      super.removeListener(evt, handler, ctx)
+      ipc.removeListener(evt, handler)
+      if (eventsCount === super._eventsCount) {
+        // Unable to remove, might be because of bad handler or
+        // because it was duplex comm
+        this.removeDuplexListener(evt)
+      }
+
+      /* if (this._isRenderProcess()) {
         let win = this._getWindow()
         win.removeListener(evt, handler)
       } else {
-        ipc.removeListener(evt, handler)
+      } */
+    }
+
+    removeDuplexListener (evt) {
+      // then remove it from duplex cache
+      // By now, it is indistinguishable which verb the event is registered to
+      // delete them all (maybe add a parameter in the future?)
+      for (let verb of ['get', 'post', 'update', 'delete']) {
+        let dupRecRoute = `${DUP_RCV_HEAD}::${evt}::${verb.toUpperCase()}`
+        if (dupRecRoute in this._cache) {
+          for (let handler of this._cache[dupRecRoute]) {
+            super.removeListener(dupRecRoute, handler)
+            ipc.removeListener(dupRecRoute, handler)
+          }
+          Reflect.deleteProperty(this._cache, dupRecRoute)
+        }
       }
+    }
+
+    removeAllListeners () {
+      super.removeAllListeners()
+      ipc.removeAllListeners()
     }
 
     get () {
@@ -412,14 +456,15 @@
 
     clean (e) {
       let name = `${this._name.toUpperCase()}::CLOSE`
-      DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames())
       let wins = this._getWindows()
+      DEBUG('clean', 'sending close', name, 'pre', 'events', this.eventNames())
+      // Communicate we are closing
+      super.emit(name)
       ipc && ipc.send && ipc.send(name)
-      // Communicate we are closing, clear ipc too?
       wins.forEach(w => { w.send(name) })
-      super.removeAllListeners()
-      let win = this._getWindow()
-      win && win.removeListener('close', this.clean)
+
+      // Remove listeners
+      this.removeAllListeners()
       DEBUG('clean', 'sending close', name, 'post', 'events', this.eventNames())
       // This ensures we do not interfere in the close process
       e && (e.returnValue = undefined)

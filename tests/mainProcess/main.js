@@ -6,7 +6,9 @@
 const should = require('should')
 /* eslint-enable no-unused-vars */
 const path = require('path')
-const router = require(path.join(__dirname, '/../../router'))('TEST')
+const requireNC = require('require-no-cache')
+
+let router = requireNC(path.join(__dirname, '/../../router'))('TEST', {timeoutTime: 300})
 
 describe('Main Process', () => {
   describe('Simplex Communication', () => {
@@ -468,6 +470,7 @@ describe('Main Process', () => {
         let reqResult = 'ok'
         let firstCall = null
         let secondCall = null
+        router = requireNC(path.join(__dirname, '/../../router'))('TEST', {timeoutTime: 300})
 
         router.get('this::will::yes::be::called', (req, res) => {
           should.exist(req)
@@ -593,8 +596,6 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from whatever part matching routes', (done) => {
-      // global.DEBUG = 'route'
-
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
         let intermediate = []
