@@ -82,6 +82,7 @@ describe('Renderer Process Complex', () => {
     describe('Data Types', () => {
       // VERB: GET
       it('should receive an string of data', (done) => {
+        // router.removeAllListeners()
         let sent = '5js2q4k'
         let reqResult = 'ok'
         router.get('doubleCommTest', (req, res) => {
@@ -99,6 +100,7 @@ describe('Renderer Process Complex', () => {
       })
       // VERB: POST
       it('should receive an object of data', (done) => {
+        // router.removeAllListeners()
         let sent = { id: '5js2q4k' }
         let reqResult = 'ok'
         router.post('doubleCommTest', (req, res) => {
@@ -117,6 +119,7 @@ describe('Renderer Process Complex', () => {
       })
       // VERB: UPDATE
       it('should receive a nested object of data', (done) => {
+        // router.removeAllListeners()
         let sent = { id: '5js2q4k', data: { user: 'Test', pass: 'ThePass' } }
         let reqResult = 'ok'
         router.update('doubleCommTest', (req, res) => {
@@ -135,6 +138,7 @@ describe('Renderer Process Complex', () => {
       })
       // VERB: DELETE
       it('should receive an array of data', (done) => {
+        // router.removeAllListeners()
         let sent = [ '5js2q4k', '2jdk', '4kwpd' ]
         let reqResult = 'ok'
         router.delete('doubleCommTest', (req, res) => {
@@ -155,6 +159,7 @@ describe('Renderer Process Complex', () => {
 
     describe('Multiple calls', () => {
       it('should execute the callback for a simple "on event" once for each triggered "send"', (done) => {
+        // router.removeAllListeners()
         let testCalls = 4
         let sent = { id: '5js2q4k' }
         let reqResult = 'ok'

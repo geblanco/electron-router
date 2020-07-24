@@ -229,7 +229,26 @@
       // do not register => trigger directly, Event Queue
       super.on(evt, listener, ctx)
       if (ipc && ipc.on) {
-        ipc.on(evt, listener)
+        ipc.on(evt, (function (router, route, listener, ctx) {
+          function handler (event) {
+            // horrible hack, ipc send event as first paremeter,
+            // event emitter doesn't, duck-type to check it
+            let sliceIndex = 0
+            if (
+              ('sender' in event && 'senderId' in event) ||
+              typeof event.preventDefault === 'function'
+            ) {
+              sliceIndex = 1
+            }
+            let args = Array.prototype.slice.call(arguments, sliceIndex)
+            DEBUG('on', 'inside ipc on', event, args)
+            listener.apply(ctx, args)
+            args = event = null
+            // args = event = listener = ctx = null
+          }
+          router._cache[route].push(handler)
+          return handler
+        })(this, evt, listener, ctx))
       }
     }
 
@@ -401,20 +420,17 @@
       // by now, we try to remove it normally, and if it fails we try it
       // on duplex comm, in the future it could be specified
 
-      const eventsCount = super.__eventsCount
       super.removeListener(evt, handler, ctx)
-      ipc.removeListener(evt, handler)
-      if (eventsCount === super._eventsCount) {
+      if (evt in this._cache) {
+        for (let handler of this._cache[evt]) {
+          ipc.removeListener(evt, handler)
+        }
+        Reflect.deleteProperty(this._cache, evt)
+      } else {
         // Unable to remove, might be because of bad handler or
         // because it was duplex comm
         this.removeDuplexListener(evt)
       }
-
-      /* if (this._isRenderProcess()) {
-        let win = this._getWindow()
-        win.removeListener(evt, handler)
-      } else {
-      } */
     }
 
     removeDuplexListener (evt) {
@@ -436,6 +452,7 @@
     removeAllListeners () {
       super.removeAllListeners()
       ipc.removeAllListeners()
+      this._cache = new DefaultDict(Array)
     }
 
     get () {

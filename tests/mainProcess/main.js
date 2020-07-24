@@ -14,6 +14,7 @@ describe('Main Process', () => {
   describe('Simplex Communication', () => {
     describe('Data Types', () => {
       it('should receive an string of data', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         router.on('simpleCommTest', (args) => {
           args.should.be.a.String().and.be.exactly(data)
@@ -23,6 +24,7 @@ describe('Main Process', () => {
         router.send('simpleCommTest', data)
       })
       it('should receive an object of data', (done) => {
+        router.removeAllListeners()
         let data = { id: '5js2q4k' }
         router.on('simpleCommTest', (args) => {
           args.should.containDeepOrdered(data)
@@ -32,6 +34,7 @@ describe('Main Process', () => {
         router.send('simpleCommTest', data)
       })
       it('should receive a nested object of data', (done) => {
+        router.removeAllListeners()
         let data = { id: '5js2q4k', data: { user: 'Test', pass: 'ThePass' } }
         router.on('simpleCommTest', (args) => {
           args.should.containDeepOrdered(data)
@@ -41,6 +44,7 @@ describe('Main Process', () => {
         router.send('simpleCommTest', data)
       })
       it('should receive an array of data', (done) => {
+        router.removeAllListeners()
         let data = [ '5js2q4k', '2jdk', '4kwpd' ]
         router.on('simpleCommTest', (args) => {
           args.should.be.a.instanceOf(Array).and.have.lengthOf(data.length)
@@ -54,6 +58,7 @@ describe('Main Process', () => {
 
     describe('Multiple calls', () => {
       it('should execute the callback for a simple "on event" once for each triggered "send"', (done) => {
+        router.removeAllListeners()
         let testCalls = 200
         router.on('alwaysCall', (args) => {
           args.should.have.keys('id')
@@ -68,6 +73,7 @@ describe('Main Process', () => {
 
     describe('Wild Cards', () => {
       it('should send a signal to all routes', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         let intermediate = null
 
@@ -87,6 +93,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from any route', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         let intermediate = null
 
@@ -106,6 +113,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from a matching end of routes', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         let intermediate = null
 
@@ -124,6 +132,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from a matching start of routes', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         let intermediate = null
 
@@ -142,6 +151,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from whatever part matching routes', (done) => {
+        router.removeAllListeners()
         let data = '5js2q4k'
         let intermediate = []
 
@@ -179,6 +189,7 @@ describe('Main Process', () => {
     describe('Data Types', () => {
       // VERB: GET
       it('should receive an string of data', (done) => {
+        router.removeAllListeners()
         let sent = '5js2q4k'
         let reqResult = 'ok'
         router.get('doubleCommTest', (req, res) => {
@@ -199,6 +210,7 @@ describe('Main Process', () => {
       })
       // VERB: POST
       it('should receive an object of data', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k' }
         let reqResult = 'ok'
         router.post('doubleCommTest', (req, res) => {
@@ -219,6 +231,7 @@ describe('Main Process', () => {
       })
       // VERB: UPDATE
       it('should receive a nested object of data', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: { user: 'Test', pass: 'ThePass' } }
         let reqResult = 'ok'
         router.update('doubleCommTest', (req, res) => {
@@ -239,6 +252,7 @@ describe('Main Process', () => {
       })
       // VERB: DELETE
       it('should receive an array of data', (done) => {
+        router.removeAllListeners()
         let sent = [ '5js2q4k', '2jdk', '4kwpd' ]
         let reqResult = 'ok'
         router.delete('doubleCommTest', (req, res) => {
@@ -261,6 +275,7 @@ describe('Main Process', () => {
 
     describe('Error', () => {
       it('should stop calling routes on first error ( first one errors )', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let ERR = 'BAD_REQUEST'
         let firstCall = null
@@ -305,6 +320,7 @@ describe('Main Process', () => {
       })
 
       it('should stop calling routes on first error ( middle one errors )', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let ERR = 'BAD_REQUEST'
         let reqResult = 'ok'
@@ -364,6 +380,7 @@ describe('Main Process', () => {
       })
 
       it('should stop calling routes when one timeouts', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let firstCall = null
 
@@ -395,6 +412,7 @@ describe('Main Process', () => {
 
     describe('Multiple calls', () => {
       it('should execute the callback for a simple "on event" once for each triggered "send"', (done) => {
+        router.removeAllListeners()
         let testCalls = 4
         let sent = { id: '5js2q4k' }
         let reqResult = 'ok'
@@ -422,6 +440,7 @@ describe('Main Process', () => {
 
     describe('Wild Cards', () => {
       it('should reveice a signal from all routes', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
         let firstCall = null
@@ -466,6 +485,7 @@ describe('Main Process', () => {
       })
 
       it('should send a signal to all routes', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
         let firstCall = null
@@ -511,6 +531,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from a matching end of routes', (done) => {
+        router.removeAllListeners()
         // global.DEBUG = 'sendDuplex|_extractEvts'
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
@@ -554,6 +575,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from a matching start of routes', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
         let firstCall = null
@@ -596,6 +618,7 @@ describe('Main Process', () => {
       })
 
       it('should reveice a signal from whatever part matching routes', (done) => {
+        router.removeAllListeners()
         let sent = { id: '5js2q4k', data: [ 4, 8, 15, 16, 23, 42 ], name: 'Oceanic' }
         let reqResult = 'ok'
         let intermediate = []
