@@ -82,8 +82,14 @@ router.route('get', 'config::start', ( err, result ) => {
 
 The router is just a static object, there will be one router in the main process and another one on the renderer. Just 'require' it and start listening/sending events/data. What this object does is route callbacks from one side to another passing parameters, triggered by different events.
 It can listen to ipc events and send window events too.
-HTTP Verbs are used just as different channels and for completness (equality to express)
-For every route/event it is possible register wildcard ('*')
+HTTP Verbs are used just as different channels and for completness (equality to
+express). For every route/event it is possible register wildcard ('*').
+
+**You are responsible for unregistering your callbacks with
+`removeListener(listener)`, or all callbacks with `removeAllListeners()`, take
+into account that this will also delete whatever routes where registered on IPC
+outside the router**. In order to do unregister individual callbacks, listeners
+should not be just anonymous functions.
 
 #### Instance
 ```javascript
