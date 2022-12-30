@@ -21,7 +21,7 @@
   "devDependencies": {
     "electron-mocha": "^6.0.4",
     "istanbul": "^0.4.5",
-    "mocha": "^6.1.4",
+    "mocha": "^10.2.0",
     "require-no-cache": "^0.2.1",
     "should": "^9.0.2",
     "standard": "^8.0.0"
